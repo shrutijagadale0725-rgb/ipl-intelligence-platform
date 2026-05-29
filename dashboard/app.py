@@ -62,7 +62,7 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 /* Hide the default collapse button to lock sidebar */
-div[data-testid="collapsedControl"] { display: none !important; }
+div[data-testid="collapsedControl"] { display: flex !important; }
 
 /* Logo Section */
 .sidebar-logo-container {
@@ -215,8 +215,21 @@ hr { border-color: rgba(255,255,255,0.07) !important; }
 """, unsafe_allow_html=True)
 
 # ── SESSION STATE ───────────────────────────────────────────────────────────
+# ── PAGE CONFIG ───────────────────────────────────────────
+st.set_page_config(
+    page_title="IPL Insights",
+    page_icon="🏏",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── SESSION STATE ─────────────────────────────────────────
 if "page" not in st.session_state:
     st.session_state.page = "🏠 Home"
+
+# Force sidebar open on home
+if st.session_state.page == "🏠 Home":
+    st.query_params["sidebar"] = "expanded"
 
 # ── ROBUST DATA LOADER ─────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
@@ -462,9 +475,12 @@ def show_home():
 # ── BACK BUTTON HELPER ──────────────────────────────────────────────────────
 def _back_button():
     st.markdown('<div style="margin-bottom:8px;margin-top:-8px;">', unsafe_allow_html=True)
+
     if st.button("← Home"):
         st.session_state.page = "🏠 Home"
+        st.query_params["sidebar"] = "expanded"
         st.rerun()
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ── PAGE ROUTING ────────────────────────────────────────────────────────────
