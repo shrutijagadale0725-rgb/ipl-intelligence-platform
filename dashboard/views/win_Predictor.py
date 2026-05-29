@@ -48,7 +48,7 @@ def inject_css():
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
 html, body, [data-testid="stAppViewContainer"] { background: #080C14 !important; font-family: 'DM Sans', sans-serif !important; }
 [data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stSidebar"] { display: none; }
+
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { max-width: 900px !important; padding: 2rem 1.5rem !important; }
 [data-testid="stSelectbox"] > div > div, [data-testid="stNumberInput"] input { background: #151C2C !important; border: 1px solid rgba(255,255,255,0.07) !important; border-radius: 12px !important; color: #F0F4FF !important; font-family: 'DM Sans', sans-serif !important; font-size: 15px !important; }
@@ -293,3 +293,4 @@ def show_win_predictor():
     st.markdown(bottom_row, unsafe_allow_html=True)
     if __name__ == "__main__":
         show_win_predictor()
+
