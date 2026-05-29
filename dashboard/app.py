@@ -62,10 +62,6 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 /* Hide the default collapse button to lock sidebar */
-div[data-testid="collapsedControl"] {
-    display: flex !important;
-    z-index: 99999 !important;
-}
 
 /* Logo Section */
 .sidebar-logo-container {
@@ -480,6 +476,8 @@ def _back_button():
     st.markdown('<div style="margin-bottom:8px;margin-top:-8px;">', unsafe_allow_html=True)
 
     if st.button("← Home"):
+        st.session_state.page = "🏠 Home"
+        st.query_params["sidebar"] = "expanded"
         st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
