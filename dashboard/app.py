@@ -339,7 +339,7 @@ with st.sidebar:
         ]),
         (" INTELLIGENCE", [
             ("◈", "Venue & Season", "🏟 Venue & Season"),
-            ("◉", "Win Predictor", " Win Predictor")
+            ("◉", "Win Predictor", "Win Predictor")
         ])
     ]
 
@@ -481,6 +481,6 @@ elif page == "🏏 Player Analysis":
 elif page == "🏟 Venue & Season":
     _back_button()
     show_venue_season()
-elif page == "🤖 Win Predictor":
+elif page == "Win Predictor":
     _back_button()
     show_win_predictor()
