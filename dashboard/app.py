@@ -62,7 +62,6 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 /* Hide the default collapse button to lock sidebar */
-div[data-testid="collapsedControl"] { display: flex !important; }
 
 /* Logo Section */
 .sidebar-logo-container {
