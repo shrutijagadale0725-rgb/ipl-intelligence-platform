@@ -27,7 +27,15 @@ try:
     from views.venue_Season     import show_venue_season
     from views.win_Predictor    import show_win_predictor
 except ImportError as e:
-    st.error(f"Import Error: {e}. Make sure your 'views' folder is correctly set up.")
+    missing = str(e).replace("No module named ", "").strip("'")
+    st.error(
+        f"**Import Error:** `{e}`\n\n"
+        f"Python: `{sys.executable}`\n\n"
+        f"Install dependencies with:\n\n"
+        f"```\n{sys.executable} -m pip install -r requirements.txt\n```\n\n"
+        f"Or from the project root on Windows:\n\n"
+        f"```\n.\\run_dashboard.ps1\n```"
+    )
     st.stop()
 
 # ── PAGE CONFIG ───────────────────────────────────────────────────────────────
@@ -70,7 +78,16 @@ html, body, [data-testid="stAppViewContainer"] {
     gap: 12px;
     padding: 12px 4px 24px;
 }
-
+/* ── FIXED HEADER ───────────────────────────── */
+.top-header {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background: rgba(8,12,20,0.95);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 12px 0;
+}
 /* Section Headers */
 .nav-section-title {
     font-family: 'DM Sans', sans-serif;
@@ -213,15 +230,6 @@ hr { border-color: rgba(255,255,255,0.07) !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── SESSION STATE ───────────────────────────────────────────────────────────
-# ── PAGE CONFIG ───────────────────────────────────────────
-st.set_page_config(
-    page_title="IPL Insights",
-    page_icon="🏏",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 # ── SESSION STATE ─────────────────────────────────────────
 if "page" not in st.session_state:
     st.session_state.page = "🏠 Home"
@@ -331,59 +339,6 @@ def compute_home_intelligence(matches_df, deliveries_df):
     
     return insights
 
-# ── PREMIUM SIDEBAR (DeFi Style) ─────────────────────────────────────────────
-with st.sidebar:
-    # Logo Section
-    st.markdown(
-        '<div class="sidebar-logo-container">'
-        '<div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#00E676,#00B0FF);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 6px 20px rgba(0,230,118,0.35);">🏏</div>'
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;letter-spacing:0.06em;color:#F0F4FF;line-height:1;">IPL <span style="color:#FFD740;">INSIGHTS</span></div>'
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    # Navigation Sections
-    nav_sections = [
-        ("📊 ANALYTICS", [
-            ("⌂", "Home", "🏠 Home"),
-            ("◫", "Team Analysis", "📊 Team Analysis"),
-            ("✦", "Player Analysis", "🏏 Player Analysis")
-        ]),
-        (" INTELLIGENCE", [
-            ("◈", "Venue & Season", "🏟 Venue & Season"),
-            ("◉", "Win Predictor", "Win Predictor")
-        ])
-    ]
-
-    for section_title, items in nav_sections:
-        st.markdown(f'<div class="nav-section-title">{section_title}</div>', unsafe_allow_html=True)
-        for icon, label, page_value in items:
-            is_active = (st.session_state.page == page_value)
-            if st.button(
-                f"{icon}  {label}",
-                key=f"nav_{page_value}",
-                use_container_width=True,
-                type="primary" if is_active else "secondary"
-            ):
-                st.session_state.page = page_value
-                st.rerun()
-
-    st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
-
-    # System Status Footer (DeFi Wallet Style)
-    if matches is not None:
-        total_matches = len(matches)
-        seasons = matches["season"].nunique() if "season" in matches.columns else 17
-        st.markdown(
-            '<div class="sidebar-footer">'
-            '<div class="footer-title">📡 System Status</div>'
-            f'<div class="footer-row"><span>Dataset</span><span class="footer-val">{total_matches:,} matches</span></div>'
-            f'<div class="footer-row"><span>Seasons</span><span class="footer-val">{seasons} IPL</span></div>'
-            f'<div class="footer-row"><span>Model</span><span class="footer-val" style="color:#00E676;">● Online</span></div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
 # ── HELPER FUNCTIONS ────────────────────────────────────────────────────────
 def _section_label(text):
     return f'<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,244,255,0.35);margin:28px 0 14px;">{text}</p>'
@@ -471,31 +426,68 @@ def show_home():
     else:
         st.markdown(f'<div style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.18);border-radius:14px;padding:14px 20px;color:rgba(240,244,255,0.7);font-family:\'DM Sans\',sans-serif;font-size:13px;">✓ <b style="color:#00E676;">Data loaded.</b> {total_matches} matches · {total_seasons} seasons · Use the sidebar to explore.</div>', unsafe_allow_html=True)
 
-# ── BACK BUTTON HELPER ──────────────────────────────────────────────────────
-def _back_button():
-    st.markdown('<div style="margin-bottom:8px;margin-top:-8px;">', unsafe_allow_html=True)
-
-    if st.button("← Home"):
-        st.session_state.page = "🏠 Home"
-        st.query_params["sidebar"] = "expanded"
-        st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
+def show_header():
 
+    st.markdown(
+        """
+        <div class="top-header">
+        <h2 style="
+            color:#F0F4FF;
+            text-align:center;
+            font-family:'Bebas Neue';
+            letter-spacing:0.08em;
+            margin-bottom:18px;
+        ">
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    with col1:
+        if st.button("🏠 Home", use_container_width=True):
+            st.session_state.page = "🏠 Home"
+            st.rerun()
+
+    with col2:
+        if st.button("📊 Team Analysis", use_container_width=True):
+            st.session_state.page = "📊 Team Analysis"
+            st.rerun()
+
+    with col3:
+        if st.button("🏏 Player Analysis", use_container_width=True):
+            st.session_state.page = "🏏 Player Analysis"
+            st.rerun()
+
+    with col4:
+        if st.button("🏟 Venue & Season", use_container_width=True):
+            st.session_state.page = "🏟 Venue & Season"
+            st.rerun()
+
+    with col5:
+        if st.button("🤖 Win Predictor", use_container_width=True):
+            st.session_state.page = "Win Predictor"
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
 # ── PAGE ROUTING ────────────────────────────────────────────────────────────
+show_header()
+
 page = st.session_state.page
 
 if page == "🏠 Home":
     show_home()
+
 elif page == "📊 Team Analysis":
-    _back_button()
     show_team_analysis()
+
 elif page == "🏏 Player Analysis":
-    _back_button()
     show_player_analysis()
+
 elif page == "🏟 Venue & Season":
-    _back_button()
     show_venue_season()
+
 elif page == "Win Predictor":
-    _back_button()
     show_win_predictor()

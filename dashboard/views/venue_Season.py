@@ -1,40 +1,13 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import os
 
+from views.shared_styles import inject_base_css, section_label, takeaway
+
 # ═════════════════════════════════════════════════════════════
-# CSS & UI HELPERS
+# PAGE-SPECIFIC HTML HELPERS
 # ═════════════════════════════════════════════════════════════
-def inject_venue_css():
-    st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { background: #080C14 !important; font-family: 'DM Sans', sans-serif !important; }
-    [data-testid="stHeader"] { background: transparent !important; }
-    
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { max-width: 980px !important; padding: 2rem 1.5rem !important; }
-    [data-testid="stSelectbox"] > div > div { background: #151C2C !important; border: 1px solid rgba(255,255,255,0.07) !important; border-radius: 12px !important; color: #F0F4FF !important; font-family: 'DM Sans', sans-serif !important; font-size: 15px !important; }
-    [data-testid="stSelectbox"] label { color: rgba(240,244,255,0.45) !important; font-size: 12px !important; font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #080C14; } ::-webkit-scrollbar-thumb { background: #1E2A40; border-radius: 99px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-def _section_label(title, subtitle=""):
-    html = f'<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,244,255,0.35);margin:28px 0 6px;">{title}</p>'
-    if subtitle:
-        html += f'<p style="font-family:\'DM Sans\',sans-serif;font-size:12px;color:rgba(240,244,255,0.35);margin:0 0 14px;">{subtitle}</p>'
-    return html
-
-def _takeaway(text, color="#00B0FF"):
-    return (
-        f'<div style="background:{color}0A;border:1px solid {color}1A;border-radius:10px;padding:10px 14px;margin:6px 0 20px;display:flex;align-items:center;gap:8px;">'
-        f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:500;color:{color};">💡 {text}</span>'
-        f'</div>'
-    )
-
 def _index_badge(score, label, color):
     return (
         f'<span style="display:inline-flex;align-items:center;gap:8px;background:{color}15;border:1px solid {color}33;'
@@ -58,11 +31,10 @@ def load_venue_data():
     base = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     m_path = os.path.join(base, "data", "cleaned", "matches_clean.csv")
     d_path = os.path.join(base, "data", "cleaned", "deliveries_clean.csv")
-    
+
     matches = pd.read_csv(m_path)
     deliveries = pd.read_csv(d_path)
-    
-    # Normalize common IPL column variants
+
     if 'total_runs' in deliveries.columns and 'batsman_runs' not in deliveries.columns:
         deliveries.rename(columns={'total_runs': 'batsman_runs'}, inplace=True)
     if 'venue' not in deliveries.columns and 'venue' in matches.columns:
@@ -71,7 +43,7 @@ def load_venue_data():
     if 'season' not in deliveries.columns and 'season' in matches.columns:
         season_map = matches.set_index('id')['season'].to_dict()
         deliveries['season'] = deliveries['match_id'].map(season_map)
-        
+
     return matches, deliveries
 
 # ═════════════════════════════════════════════════════════════
@@ -79,21 +51,19 @@ def load_venue_data():
 # ═════════════════════════════════════════════════════════════
 @st.cache_data
 def compute_season_trends(matches, deliveries):
-    """Fixes the aggregation bug: computes match-level 1st innings totals, then averages by season."""
+    """Computes match-level 1st innings totals, then averages by season."""
     if 'inning' not in deliveries.columns or 'batsman_runs' not in deliveries.columns:
         return pd.DataFrame()
-        
-    # Aggregate to innings level
+
     innings = deliveries.groupby(['match_id', 'inning'])['batsman_runs'].sum().reset_index(name='innings_runs')
     first_inn = innings[innings['inning'] == 1].copy()
-    
-    # Map season
+
     if 'season' in matches.columns:
         season_map = matches.set_index('id')['season'].to_dict()
         first_inn['season'] = first_inn['match_id'].map(season_map)
     else:
-        first_inn['season'] = matches.iloc[0].get('season', 2024) # Fallback
-        
+        first_inn['season'] = matches.iloc[0].get('season', 2024)
+
     trends = first_inn.groupby('season')['innings_runs'].mean().reset_index()
     trends.columns = ['season', 'avg_1st_innings']
     trends = trends.sort_values('season')
@@ -103,66 +73,59 @@ def compute_season_trends(matches, deliveries):
 def compute_venue_intelligence(matches, deliveries):
     """Computes Difficulty Index, Defendable Score, and Chase Win % per venue."""
     if 'venue' not in deliveries.columns: return pd.DataFrame()
-    
-    # 1st Innings runs per match
+
     inn_runs = deliveries.groupby(['match_id', 'inning'])['batsman_runs'].sum().reset_index(name='runs')
     inn_1 = inn_runs[inn_runs['inning']==1][['match_id', 'runs']]
     inn_1 = inn_1.merge(matches[['id', 'venue', 'winner']], left_on='match_id', right_on='id')
-    
-    # Wickets per match per venue
+
     wicket_mask = deliveries.get('is_wicket') == 1 if 'is_wicket' in deliveries.columns else deliveries['player_dismissed'].notna()
     wkts = deliveries[wicket_mask].groupby('match_id').size().reset_index(name='wickets')
     wkts = wkts.merge(matches[['id', 'venue']], left_on='match_id', right_on='id')
-    
-    # Aggregate per venue
+
     venue_stats = inn_1.groupby('venue').agg(
         avg_score=('runs', 'mean'),
         matches=('id', 'count'),
         defendable_median=('runs', 'median')
     ).reset_index()
-    
+
     wkt_stats = wkts.groupby('venue')['wickets'].mean().reset_index(name='avg_wickets')
     venue_stats = venue_stats.merge(wkt_stats, on='venue', how='left')
-    
-    # Chase win %
-    # Determine if chasing team won
+
     matches_temp = matches.copy()
     matches_temp['is_chase_win'] = matches_temp['winner'] != matches_temp['toss_winner']
     chase_pct = matches_temp.groupby('venue')['is_chase_win'].mean() * 100
     venue_stats = venue_stats.merge(chase_pct.rename('chase_win_pct'), on='venue')
-    
-    # Filter noise
+
     venue_stats = venue_stats[venue_stats['matches'] >= 5].copy()
-    
-    # Normalize to 0-10 for Difficulty Index
+
     def normalize(col, invert=False):
         mn, mx = col.min(), col.max()
         if mn == mx: return 5.0
         norm = (col - mn) / (mx - mn) * 10
         return (10 - norm) if invert else norm
-        
+
     venue_stats['difficulty'] = (
         normalize(venue_stats['avg_score']) * 0.5 +
         normalize(venue_stats['avg_wickets'], invert=True) * 0.3 +
         normalize(venue_stats['chase_win_pct']) * 0.2
     )
-    
+
     def label_idx(score):
         if score >= 7.0: return "Batting Paradise", "#00E676"
         if score <= 3.5: return "Bowler's Haven", "#FF3D71"
         return "Balanced", "#FFD740"
-        
+
     venue_stats['label'] = venue_stats['difficulty'].apply(lambda x: label_idx(x)[0])
     venue_stats['color']  = venue_stats['difficulty'].apply(lambda x: label_idx(x)[1])
-    
+
     return venue_stats.sort_values('difficulty', ascending=False)
 
 # ═════════════════════════════════════════════════════════════
 # MAIN PAGE
 # ═════════════════════════════════════════════════════════════
 def show_venue_season():
-    inject_venue_css()
-    
+    inject_base_css()
+
     st.markdown(
         '<div style="text-align:center;padding:20px 0 36px;">'
         '<div style="display:inline-block;background:linear-gradient(135deg,rgba(255,215,64,0.12),rgba(255,61,113,0.12));'
@@ -183,9 +146,9 @@ def show_venue_season():
         return
 
     # ── SECTION 1: VENUE DIFFICULTY INDEX ─────────────────
-    st.markdown(_section_label("📊 Venue Difficulty Index", "Composite score (0–10) combining avg 1st innings score, wicket frequency, and chase win rate."), unsafe_allow_html=True)
+    st.markdown(section_label("📊 Venue Difficulty Index", "Composite score (0-10) combining avg 1st innings score, wicket frequency, and chase win rate."), unsafe_allow_html=True)
     v_intel = compute_venue_intelligence(matches, deliveries)
-    
+
     if not v_intel.empty:
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -203,11 +166,11 @@ def show_venue_season():
                         f'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;text-transform:uppercase;color:rgba(240,244,255,0.35);margin-bottom:10px;">⚖️ Most Balanced</div>'
                         + _venue_row(v_intel.iloc[len(v_intel)//2]['venue'], v_intel.iloc[len(v_intel)//2]['difficulty'], v_intel.iloc[len(v_intel)//2]['label'], v_intel.iloc[len(v_intel)//2]['color'])
                         + '</div>', unsafe_allow_html=True)
-        
-        st.markdown(_takeaway("Index weights: 50% avg score, 30% wicket frequency (inverse), 20% chase win %."), unsafe_allow_html=True)
+
+        st.markdown(takeaway("Index weights: 50% avg score, 30% wicket frequency (inverse), 20% chase win %."), unsafe_allow_html=True)
 
     # ── SECTION 2: DEFENDABLE SCORE CALCULATOR ───────────
-    st.markdown(_section_label("🎯 Defendable Score Thresholds", "Median 1st innings total in matches where the defending team actually won."), unsafe_allow_html=True)
+    st.markdown(section_label("🎯 Defendable Score Thresholds", "Median 1st innings total in matches where the defending team actually won."), unsafe_allow_html=True)
     if not v_intel.empty:
         def_df = v_intel[['venue', 'defendable_median', 'avg_score']].sort_values('defendable_median', ascending=False).head(6)
         def_html = ''.join(
@@ -220,12 +183,12 @@ def show_venue_season():
             for r in def_df.itertuples()
         )
         st.markdown(f'<div style="background:#0E1420;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:16px 20px;">{def_html}</div>', unsafe_allow_html=True)
-        st.markdown(_takeaway(f"At {def_df.iloc[0]['venue']}, {def_df.iloc[0]['defendable_median']:.0f} is statistically safe enough to defend half the time."), unsafe_allow_html=True)
+        st.markdown(takeaway(f"At {def_df.iloc[0]['venue']}, {def_df.iloc[0]['defendable_median']:.0f} is statistically safe enough to defend half the time."), unsafe_allow_html=True)
 
-    # ── SECTION 3: SEASON SCORING TRENDS (FIXED) ────────
-    st.markdown(_section_label("📈 Season Scoring Trends", "Average first-innings totals per IPL season (match-level aggregation)."), unsafe_allow_html=True)
+    # ── SECTION 3: SEASON SCORING TRENDS ────────
+    st.markdown(section_label("📈 Season Scoring Trends", "Average first-innings totals per IPL season (match-level aggregation)."), unsafe_allow_html=True)
     trends = compute_season_trends(matches, deliveries)
-    
+
     if not trends.empty:
         fig = px.line(trends, x='season', y='avg_1st_innings', markers=True,
                       color_discrete_sequence=['#00B0FF'])
@@ -236,11 +199,11 @@ def show_venue_season():
             xaxis=dict(gridcolor="rgba(255,255,255,0.05)"), yaxis=dict(gridcolor="rgba(255,255,255,0.05)", title="Avg 1st Innings Score")
         )
         st.plotly_chart(fig, use_container_width=True)
-        st.markdown(_takeaway(f"Scores trend upward over time. Peak average: {trends['avg_1st_innings'].max():.1f} in {trends.loc[trends['avg_1st_innings'].idxmax(), 'season']}."), unsafe_allow_html=True)
+        st.markdown(takeaway(f"Scores trend upward over time. Peak average: {trends['avg_1st_innings'].max():.1f} in {trends.loc[trends['avg_1st_innings'].idxmax(), 'season']}."), unsafe_allow_html=True)
 
     # ── SECTION 4: CHASING & TOSS STRATEGY ──────────────
-    st.markdown(_section_label("🔄 Chasing Advantage vs Batting First", "Historical win rates for teams batting first vs second per venue."), unsafe_allow_html=True)
-    
+    st.markdown(section_label("🔄 Chasing Advantage vs Batting First", "Historical win rates for teams batting first vs second per venue."), unsafe_allow_html=True)
+
     chase_stats = matches.copy()
     chase_stats['is_chase'] = chase_stats['winner'] != chase_stats['toss_winner']
     chase_venue = chase_stats.groupby('venue').agg(
@@ -249,11 +212,11 @@ def show_venue_season():
     ).reset_index()
     chase_venue['chase_pct'] = (chase_venue['chase_wins'] / chase_venue['total']) * 100
     chase_venue = chase_venue[chase_venue['total'] >= 10].sort_values('chase_pct', ascending=False)
-    
+
     if not chase_venue.empty:
         best_chase = chase_venue.head(5)
         worst_chase = chase_venue.tail(5).iloc[::-1]
-        
+
         cc1, cc2 = st.columns(2)
         with cc1:
             st.markdown(
@@ -271,6 +234,6 @@ def show_venue_season():
                         f'<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:rgba(240,244,255,0.6);">{r.venue}</span>'
                         f'<span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#FF3D71;font-weight:600;">{r.chase_pct:.1f}%</span></div>'
                         for r in worst_chase.itertuples()) + '</div>', unsafe_allow_html=True)
-        st.markdown(_takeaway(f"Teams win {chase_venue['chase_pct'].mean():.1f}% of chases on average. At {best_chase.iloc[0]['venue']}, chasing wins {best_chase.iloc[0]['chase_pct']:.0f}% of the time."), unsafe_allow_html=True)
+        st.markdown(takeaway(f"Teams win {chase_venue['chase_pct'].mean():.1f}% of chases on average. At {best_chase.iloc[0]['venue']}, chasing wins {best_chase.iloc[0]['chase_pct']:.0f}% of the time."), unsafe_allow_html=True)
 
     st.markdown('<div style="height:1px;background:rgba(255,255,255,0.06);margin:32px 0;"></div>', unsafe_allow_html=True)

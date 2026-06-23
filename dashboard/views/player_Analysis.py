@@ -3,50 +3,11 @@ import pandas as pd
 import plotly.express as px
 import os
 
-# ═════════════════════════════════════════════════════════════
-# CSS
-# ═════════════════════════════════════════════════════════════
-def inject_css():
-    st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { background: #080C14 !important; font-family: 'DM Sans', sans-serif !important; }
-    [data-testid="stHeader"] { background: transparent !important; }
-   
-    #MainMenu, footer, header { visibility: hidden; }
-    .block-container { max-width: 960px !important; padding: 2rem 1.5rem !important; }
-    [data-testid="stSelectbox"] > div > div { background: #151C2C !important; border: 1px solid rgba(255,255,255,0.07) !important; border-radius: 12px !important; color: #F0F4FF !important; font-family: 'DM Sans', sans-serif !important; font-size: 15px !important; }
-    [data-testid="stSelectbox"] label { color: rgba(240,244,255,0.45) !important; font-size: 12px !important; font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
-    [data-testid="stButton"] > button { background: rgba(255,255,255,0.05) !important; color: rgba(240,244,255,0.7) !important; font-family: 'DM Sans', sans-serif !important; font-size: 13px !important; font-weight: 600 !important; letter-spacing: 0.04em !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; padding: 8px 16px !important; width: auto !important; box-shadow: none !important; transition: all 0.2s ease !important; }
-    [data-testid="stButton"] > button:hover { background: rgba(0,176,255,0.1) !important; border-color: rgba(0,176,255,0.3) !important; color: #F0F4FF !important; }
-    [data-testid="metric-container"] { background: #151C2C !important; border: 1px solid rgba(255,255,255,0.07) !important; border-radius: 16px !important; padding: 16px 20px !important; }
-    [data-testid="metric-container"] label { color: rgba(240,244,255,0.45) !important; font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
-    [data-testid="metric-container"] [data-testid="stMetricValue"] { color: #F0F4FF !important; font-family: 'JetBrains Mono', monospace !important; font-size: 28px !important; font-weight: 600 !important; }
-    hr { border-color: rgba(255,255,255, 0.07) !important; }
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #080C14; } ::-webkit-scrollbar-thumb { background: #1E2A40; border-radius: 99px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-PLOTLY_LAYOUT = dict(
-    template="plotly_dark",
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="DM Sans", color="#F0F4FF"),
-    title_font=dict(family="Bebas Neue", size=22, color="#F0F4FF"),
-    margin=dict(l=20, r=20, t=50, b=20),
-    xaxis=dict(gridcolor="rgba(255,255,255,0.05)", showline=False),
-    yaxis=dict(gridcolor="rgba(255,255,255,0.05)", showline=False),
-)
+from views.shared_styles import inject_base_css, section_label, PLOTLY_LAYOUT
 
 # ═════════════════════════════════════════════════════════════
-# HTML HELPERS
+# PAGE-SPECIFIC HTML HELPERS
 # ═════════════════════════════════════════════════════════════
-def _section_label(text):
-    return (
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:700;'
-        f'letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,244,255,0.35);margin:28px 0 14px;">{text}</p>'
-    )
-
 def _role_badge(role, color):
     """Pill badge showing the player's classified role."""
     return (
@@ -79,7 +40,7 @@ def _phase_block(phase, sr, avg, color):
     )
 
 def _consistency_bar(score, color):
-    """Visual consistency bar 0–100."""
+    """Visual consistency bar 0-100."""
     pct = int(score * 100)
     if score >= 0.70:
         label, desc = "CONSISTENT", "Low variance — reliable scorer every innings."
@@ -148,7 +109,7 @@ ROLE_CONFIG = {
     "Explosive Opener":  {"color": "#FF3D71", "icon": "💥", "desc": "High-impact in Powerplay. Attacks from ball one."},
     "Classic Anchor":    {"color": "#00B0FF", "icon": "⚓", "desc": "Builds innings steadily. Low risk, high average."},
     "Finisher":          {"color": "#FFD740", "icon": "🎯", "desc": "Peaks in death overs. Elevates SR when it matters most."},
-    "Middle Order Batter":{"color": "#00E676", "icon": "🏏", "desc": "Consistent presence in overs 7–15. Balances attack and defence."},
+    "Middle Order Batter":{"color": "#00E676", "icon": "🏏", "desc": "Consistent presence in overs 7-15. Balances attack and defence."},
     "Lower Order Hitter": {"color": "#A78BFA", "icon": "⚡", "desc": "Quick runs late. High SR but limited average."},
 }
 
@@ -192,9 +153,9 @@ def classify_player_role(player_data: pd.DataFrame) -> tuple[str, dict]:
 
 def get_phase_stats(player_data: pd.DataFrame) -> dict:
     phases = {
-        "Powerplay\n(1–6)": player_data[player_data['over'].between(1, 6)],
-        "Middle\n(7–15)":   player_data[player_data['over'].between(7, 15)],
-        "Death\n(16–20)":   player_data[player_data['over'].between(16, 20)],
+        "Powerplay\n(1-6)": player_data[player_data['over'].between(1, 6)],
+        "Middle\n(7-15)":   player_data[player_data['over'].between(7, 15)],
+        "Death\n(16-20)":   player_data[player_data['over'].between(16, 20)],
     }
     result = {}
     for name, df in phases.items():
@@ -221,7 +182,7 @@ def get_venue_performance(player, deliveries, matches):
         venue_map = matches.set_index('id')['venue'].to_dict() if 'id' in matches.columns else {}
         deliveries = deliveries.copy()
         deliveries['venue'] = deliveries['match_id'].map(venue_map)
-        
+
     p_data = deliveries[deliveries['batter'] == player].copy()
     if p_data.empty or 'venue' not in p_data.columns:
         return [], []
@@ -255,11 +216,21 @@ def get_player_stats(player, deliveries):
     }
 
 # ═════════════════════════════════════════════════════════════
+# DATA LOADER (now cached — was missing before)
+# ═════════════════════════════════════════════════════════════
+@st.cache_data
+def load_player_data():
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    deliveries = pd.read_csv(os.path.join(BASE_DIR, "data", "cleaned", "deliveries_clean.csv"))
+    matches    = pd.read_csv(os.path.join(BASE_DIR, "data", "cleaned", "matches_clean.csv"))
+    return matches, deliveries
+
+# ═════════════════════════════════════════════════════════════
 # MAIN PAGE RENDERER
 # ═════════════════════════════════════════════════════════════
 def show_player_analysis():
-    inject_css()
-    
+    inject_base_css()
+
     st.markdown(
         '<div style="text-align:center;padding:20px 0 36px;">'
         '<div style="display:inline-block;background:linear-gradient(135deg,rgba(0,230,118,0.12),rgba(0,176,255,0.12));'
@@ -274,11 +245,9 @@ def show_player_analysis():
         '</div>', unsafe_allow_html=True
     )
 
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    deliveries = pd.read_csv(os.path.join(BASE_DIR, "data", "cleaned", "deliveries_clean.csv"))
-    matches    = pd.read_csv(os.path.join(BASE_DIR, "data", "cleaned", "matches_clean.csv"))
+    matches, deliveries = load_player_data()
 
-    st.markdown(_section_label("🔭 Player Scouting"), unsafe_allow_html=True)
+    st.markdown(section_label("🔭 Player Scouting"), unsafe_allow_html=True)
     st.markdown(
         '<p style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:rgba(240,244,255,0.4);margin:-10px 0 18px;">'
         'Select any player to see their role classification, phase breakdown, consistency score, and venue intelligence.</p>',
@@ -295,14 +264,12 @@ def show_player_analysis():
 
     role, role_cfg = classify_player_role(p_data)
     role_color = role_cfg['color']
-    role_icon  = role_cfg['icon']
     role_desc  = role_cfg['desc']
 
     c_score = get_consistency_score(p_data)
     c_pct   = int(c_score * 100)
     c_color = "#00E676" if c_score >= 0.70 else ("#FFD740" if c_score >= 0.45 else "#FF3D71")
 
-    # FIXED F-STRINGS: Inner quotes changed to single quotes to avoid SyntaxError
     st.markdown(
         f'<div style="background:linear-gradient(135deg,{role_color}12,{role_color}06);'
         f'border:1px solid {role_color}28;border-radius:24px;padding:28px 28px 20px;margin-bottom:16px;">'
@@ -326,7 +293,7 @@ def show_player_analysis():
         + '</div>', unsafe_allow_html=True
     )
 
-    st.markdown(_section_label("⏱️ Phase-by-Phase Breakdown"), unsafe_allow_html=True)
+    st.markdown(section_label("⏱️ Phase-by-Phase Breakdown"), unsafe_allow_html=True)
     phase_stats = get_phase_stats(p_data)
     phase_colors = ["#00B0FF", "#00E676", "#FF3D71"]
     phase_html = '<div style="display:flex;gap:12px;margin-bottom:20px;">'
@@ -335,12 +302,12 @@ def show_player_analysis():
     phase_html += '</div>'
     st.markdown(phase_html, unsafe_allow_html=True)
 
-    st.markdown(_section_label("📈 Consistency Profile"), unsafe_allow_html=True)
+    st.markdown(section_label("📈 Consistency Profile"), unsafe_allow_html=True)
     st.markdown(_consistency_bar(c_score, c_color), unsafe_allow_html=True)
 
     best_venues, worst_venues = get_venue_performance(scout_player, deliveries, matches)
     if best_venues or worst_venues:
-        st.markdown(_section_label("🏟️ Venue Intelligence"), unsafe_allow_html=True)
+        st.markdown(section_label("🏟️ Venue Intelligence"), unsafe_allow_html=True)
         vc1, vc2 = st.columns(2)
         with vc1:
             if best_venues: st.markdown(_venue_mini_table("✅ Strongest Venues (avg)", best_venues, "#00E676"), unsafe_allow_html=True)
@@ -349,7 +316,7 @@ def show_player_analysis():
 
     st.markdown('<div style="height:1px;background:rgba(255,255,255,0.06);margin:28px 0 4px;"></div>', unsafe_allow_html=True)
 
-    st.markdown(_section_label("⚔️ Player Comparison"), unsafe_allow_html=True)
+    st.markdown(section_label("⚔️ Player Comparison"), unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1: player1 = st.selectbox("Select Player 1", players, index=0, key="cmp1")
     with col2: player2 = st.selectbox("Select Player 2", players, index=1, key="cmp2")
@@ -379,7 +346,7 @@ def show_player_analysis():
             + _stat_row("Runs", f'{stats2["Runs"]:,}', "🏏") + _stat_row("Strike Rate", stats2["Strike Rate"], "⚡")
             + _stat_row("Average", stats2["Average"], "📊") + _stat_row("4s / 6s", f'{stats2["4s"]} / {stats2["6s"]}', "🔥") + '</div>', unsafe_allow_html=True)
 
-    st.markdown(_section_label("📋 Head-to-Head Summary"), unsafe_allow_html=True)
+    st.markdown(section_label("📋 Head-to-Head Summary"), unsafe_allow_html=True)
     summary_html = (
         '<div style="background:#0E1420;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px 22px;margin-bottom:20px;">'
         + _comparison_winner("Runs", f'{stats1["Runs"]:,}', f'{stats2["Runs"]:,}', player1, player2)
@@ -390,7 +357,7 @@ def show_player_analysis():
     )
     st.markdown(summary_html, unsafe_allow_html=True)
 
-    st.markdown(_section_label("📊 Head-to-Head Chart"), unsafe_allow_html=True)
+    st.markdown(section_label("📊 Head-to-Head Chart"), unsafe_allow_html=True)
     comparison_df = pd.DataFrame({
         "Metric": ["Runs", "Strike Rate", "4s", "6s"],
         player1: [stats1["Runs"], stats1["Strike Rate"], stats1["4s"], stats1["6s"]],

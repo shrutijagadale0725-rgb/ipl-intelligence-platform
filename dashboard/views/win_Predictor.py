@@ -3,6 +3,13 @@ import pandas as pd
 import pickle
 import os
 
+from views.model_explain import (
+    build_contribution_chart,
+    compute_top_contributions,
+    explanation_summary,
+)
+from views.shared_styles import inject_base_css, inject_extra_css, section_label, takeaway
+
 # ── LOAD MODEL ─────────────────────────────────────────────
 model_path = os.path.join(os.path.dirname(__file__), "..", "..", "models", "pipe.pkl")
 pipe = pickle.load(open(model_path, "rb"))
@@ -40,34 +47,27 @@ TEAM_ABBR = {
     'Lucknow Super Giants': 'LSG', 'Gujarat Titans': 'GT',
 }
 
-
-# ── CSS ────────────────────────────────────────────────────
-def inject_css():
-    css = """
+# ── PAGE-SPECIFIC EXTRA CSS (the gradient PREDICT button) ──
+EXTRA_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
-html, body, [data-testid="stAppViewContainer"] { background: #080C14 !important; font-family: 'DM Sans', sans-serif !important; }
-[data-testid="stHeader"] { background: transparent !important; }
+button[data-testid="baseButton-secondary"]:has-text("PREDICT"),
+[data-testid="stButton"]:nth-of-type(2) > button {
+    width: 100% !important;
+    background: linear-gradient(135deg, #00E676, #00B0FF) !important;
+    color: #080C14 !important;
+    font-family: 'Bebas Neue', sans-serif !important;
+    font-size: 22px !important;
+    letter-spacing: 0.12em !important;
+    border: none !important;
+    border-radius: 16px !important;
+    padding: 18px 0 !important;
+    margin-top: 8px !important;
+    box-shadow: 0 4px 24px rgba(0,230,118,0.25) !important;
+}
+</style>
+"""
 
-#MainMenu, footer, header { visibility: hidden; }
-.block-container { max-width: 900px !important; padding: 2rem 1.5rem !important; }
-[data-testid="stSelectbox"] > div > div, [data-testid="stNumberInput"] input { background: #151C2C !important; border: 1px solid rgba(255,255,255,0.07) !important; border-radius: 12px !important; color: #F0F4FF !important; font-family: 'DM Sans', sans-serif !important; font-size: 15px !important; }
-[data-testid="stSelectbox"] label, [data-testid="stNumberInput"] label { color: rgba(240,244,255,0.45) !important; font-size: 12px !important; font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
-[data-testid="stButton"] > button { background: rgba(255,255,255,0.05) !important; color: rgba(240,244,255,0.7) !important; font-family: 'DM Sans', sans-serif !important; font-size: 13px !important; font-weight: 600 !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; padding: 8px 16px !important; width: auto !important; box-shadow: none !important; transition: all 0.2s ease !important; }
-[data-testid="stButton"] > button:hover { background: rgba(0,176,255,0.1) !important; border-color: rgba(0,176,255,0.3) !important; color: #F0F4FF !important; }
-button[data-testid="baseButton-secondary"]:has-text("PREDICT"), [data-testid="stButton"]:nth-of-type(2) > button { width: 100% !important; background: linear-gradient(135deg, #00E676, #00B0FF) !important; color: #080C14 !important; font-family: 'Bebas Neue', sans-serif !important; font-size: 22px !important; letter-spacing: 0.12em !important; border: none !important; border-radius: 16px !important; padding: 18px 0 !important; margin-top: 8px !important; box-shadow: 0 4px 24px rgba(0,230,118,0.25) !important; }
-[data-testid="metric-container"] { background: #151C2C !important; border: 1px solid rgba(255,255,255,0.07) !important; border-radius: 16px !important; padding: 16px 20px !important; }
-[data-testid="metric-container"] label { color: rgba(240,244,255,0.45) !important; font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.08em !important; text-transform: uppercase !important; }
-[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #F0F4FF !important; font-family: 'JetBrains Mono', monospace !important; font-size: 28px !important; font-weight: 600 !important; }
-hr { border-color: rgba(255,255,255,0.07) !important; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #080C14; }
-::-webkit-scrollbar-thumb { background: #1E2A40; border-radius: 99px; }
-</style>"""
-    st.markdown(css, unsafe_allow_html=True)
-
-
-# ── HTML HELPERS  (single-line, no indented nesting) ───────
+# ── HTML HELPERS (single-line, no indented nesting) ────────
 def _card_wrap(label, content):
     """Wraps content in a dark card with a small section label."""
     return (
@@ -75,13 +75,6 @@ def _card_wrap(label, content):
         f'<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,244,255,0.35);margin:0 0 20px;">{label}</p>'
         f'{content}'
         '</div>'
-    )
-
-
-def _section_label(text):
-    return (
-        f'<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;font-weight:700;'
-        f'letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,244,255,0.35);margin:24px 0 12px;">{text}</p>'
     )
 
 
@@ -154,7 +147,8 @@ def _commentary_card(ins_color, ins_emoji, ins_title, ins_line1, ins_line2):
 # ── MAIN ───────────────────────────────────────────────────
 def show_win_predictor():
 
-    inject_css()
+    inject_base_css()
+    inject_extra_css(EXTRA_CSS)
 
     # HERO
     st.markdown(
@@ -240,7 +234,7 @@ def show_win_predictor():
     scoreboard = (
         '<div style="position:relative;background:linear-gradient(160deg,#0E1420 0%,#080C14 100%);border:1px solid rgba(255,255,255,0.08);border-radius:28px;padding:36px 32px 32px;margin:28px 0 20px;overflow:hidden;">'
         + glow_left + glow_right
-        + _section_label("🧠 AI Prediction Result")
+        + section_label("🧠 AI Prediction Result")
         + cards_row
         + _momentum_bar(bat_abbr, bowl_abbr, win_pct, loss_pct, bat_c1, bat_c2, bowl_c2)
         + '</div>'
@@ -248,7 +242,7 @@ def show_win_predictor():
     st.markdown(scoreboard, unsafe_allow_html=True)
 
     # ── MATCH STATS ────────────────────────────────────────
-    st.markdown(_section_label("📊 Match Situation"), unsafe_allow_html=True)
+    st.markdown(section_label("📊 Match Situation"), unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1:  st.metric("Runs Left",   runs_left)
     with c2:  st.metric("Balls Left",  balls_left)
@@ -291,6 +285,30 @@ def show_win_predictor():
         + '</div>'
     )
     st.markdown(bottom_row, unsafe_allow_html=True)
-    if __name__ == "__main__":
-        show_win_predictor()
 
+    # ── MODEL TRANSPARENCY ─────────────────────────────────
+    contributions = compute_top_contributions(pipe, input_df, top_n=6)
+    st.markdown(
+        section_label(
+            "🔍 Why This Prediction?",
+            "Top feature contributions from the logistic regression model "
+            "(positive → batting team win, negative → loss).",
+        ),
+        unsafe_allow_html=True,
+    )
+    st.plotly_chart(
+        build_contribution_chart(contributions, bat_abbr),
+        use_container_width=True,
+    )
+    summary = explanation_summary(contributions, batting_team, win_pct)
+    st.markdown(takeaway(summary.replace("**", ""), "#00B0FF"), unsafe_allow_html=True)
+    st.markdown(
+        '<p style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:rgba(240,244,255,0.3);'
+        'margin:4px 0 24px;">Method: coefficient × feature value on the trained pipeline '
+        "(equivalent to SHAP for linear models). Only the top 6 drivers are shown.</p>",
+        unsafe_allow_html=True,
+    )
+
+
+if __name__ == "__main__":
+    show_win_predictor()
