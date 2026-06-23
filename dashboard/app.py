@@ -40,7 +40,7 @@ except ImportError as e:
 
 # ── PAGE CONFIG ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="IPL Insights",
+    page_title="wkt.",
     page_icon="🏏",
     layout="wide",
     initial_sidebar_state="expanded",
