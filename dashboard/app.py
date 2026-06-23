@@ -41,7 +41,7 @@ except ImportError as e:
 # ── PAGE CONFIG ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="ovrly",
-    page_icon="ovr_ipl.png",
+    page_icon="cute_ovr.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -235,8 +235,8 @@ if "page" not in st.session_state:
     st.session_state.page = "🏠 Home"
 
 # Force sidebar open on home
-if st.session_state.page == "🏠 Home":
-    st.query_params["sidebar"] = "expanded"
+#if st.session_state.page == "🏠 Home":
+#    st.query_params["sidebar"] = "expanded"
 
 # ── ROBUST DATA LOADER ─────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
