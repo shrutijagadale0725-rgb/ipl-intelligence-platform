@@ -40,8 +40,8 @@ except ImportError as e:
 
 # ── PAGE CONFIG ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="wkt.",
-    page_icon="ipl_logo_wkt.png",
+    page_title="ovrly",
+    page_icon="ovr_ipl.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
