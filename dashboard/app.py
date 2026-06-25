@@ -41,7 +41,7 @@ except ImportError as e:
 # ── PAGE CONFIG ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="overlly",
-    page_icon="cute_ovr.png",
+    page_icon="overlly.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
